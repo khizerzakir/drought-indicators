@@ -1,0 +1,24 @@
+project:
+  type: book
+  output-dir: _site
+
+book:
+  title: "Drought indicators from remote sensing"
+  subtitle: "A practical Quarto tutorial"
+  author: "CLIMB course materials"
+  date: today
+  chapters:
+    - index.qmd
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: show
+    code-tools: true
+    number-sections: true
+
+execute:
+  freeze: auto
+  warning: false
+  message: false
