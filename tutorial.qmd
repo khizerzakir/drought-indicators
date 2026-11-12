@@ -156,7 +156,7 @@ An anomaly compares an observation with a reference distribution. The following 
 ```{python}
 #| label: anomaly
 
-ndvi_baseline = series.NDVI.median("time")
+ndvi_baseline = series.NDVI.load().median("time")
 ndvi_anomaly = (series.NDVI - ndvi_baseline).rename("NDVI anomaly")
 
 fig, ax = plt.subplots(figsize=(9, 4))
