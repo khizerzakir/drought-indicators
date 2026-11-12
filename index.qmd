@@ -1,265 +1,65 @@
 ---
 title: "Drought indicators from remote sensing"
-description: "A first practical workflow for deriving drought indicators from Sentinel-2 imagery."
+description: "A practical introduction to drought, remote-sensing indicators, and reproducible analysis."
 ---
 
-## What we will learn
+## Welcome
 
-Remote sensing does not measure drought directly. It measures surface properties that
-respond to water stress, such as vegetation greenness, canopy water content, and land
-surface temperature. In this tutorial we will:
+Drought is a slow-onset hazard caused by an extended period of unusually low water
+availability. It is not one single phenomenon: a lack of precipitation can become
+**meteorological drought**, reduced soil moisture can become **agricultural drought**,
+and falling streamflow or reservoir storage can become **hydrological drought**.
+Impacts depend on season, land cover, groundwater, irrigation, and demand for water.
 
-1. discover openly accessible Sentinel-2 imagery through a STAC API;
-2. load a small area of interest (AOI) as a cloud-optimised raster;
-3. mask clouds and calculate spectral indices;
-4. turn a time series into drought indicators using anomalies and the vegetation
-   condition index (VCI); and
-5. distinguish indicators that can be derived from Sentinel-2 from those that require
-   thermal observations.
+Remote sensing helps us observe drought impacts consistently across space. Satellites
+do not measure drought directly; they measure signals such as vegetation greenness,
+canopy water content, surface wetness, and land-surface temperature. These signals
+become drought indicators when they are compared with an appropriate seasonal and
+historical baseline.
 
-The workflow is deliberately small enough to run on a laptop. The same operations can
-later be applied to a larger AOI or a longer time series.
+## The indicator toolbox
 
-## Setup
+| Indicator family | Example | What it tells us |
+|---|---|---|
+| Vegetation greenness | NDVI | Whether vegetation is photosynthetically active and dense |
+| Vegetation water content | NDMI | Whether foliage has a stronger or weaker water signal |
+| Surface wetness or water | NDWI | Where open water or wet surfaces may be changing |
+| Relative vegetation condition | VCI | Where current greenness sits between historical extremes |
+| Thermal condition | TCI | Whether land surface temperature is unusually hot |
+| Combined vegetation health | VHI | A combined optical and thermal stress signal |
 
-This chapter uses Python inside Quarto. Install the dependencies from
-[`requirements.txt`](requirements.txt), then render this book with:
+No indicator is universally best. NDVI can respond to phenology, harvest, pests, and
+soil background. NDMI can be sensitive to canopy structure and atmospheric effects.
+Thermal indicators require careful calibration and are not available from Sentinel-2
+alone. Always report the sensor, quality mask, baseline period, spatial aggregation,
+and temporal compositing used to create an indicator.
 
-```bash
-quarto render
-```
+## Learning path
 
-The data come from the public Microsoft Planetary Computer STAC catalogue. No account
-or API key is required. The first run downloads only the tiles intersecting the AOI;
-subsequent runs benefit from the local cache.
+1. Read the [full tutorial](tutorial.qmd) for the concepts and the complete
+   Sentinel-2 workflow.
+2. Run [Notebook 1: Sentinel-2 drought indices](notebooks/01_sentinel2_drought_indices.ipynb)
+   to discover imagery, mask clouds, and calculate NDVI, NDMI, NDWI, anomalies, and VCI.
+3. Run [Notebook 2: indicator comparison](notebooks/02_drought_indicators_comparison.ipynb)
+   to explore VCI, TCI, and VHI with a reproducible synthetic example.
+4. Complete the exercises at the end of the tutorial and replace the sample baseline
+   with several years of comparable observations.
 
-```{python}
-#| label: setup
-#| include: false
+## Before interpreting a drought signal
 
-import numpy as np
-import matplotlib.pyplot as plt
-import xarray as xr
-import geopandas as gpd
-from shapely.geometry import box as make_box
-from pystac_client import Client
-import planetary_computer
-from odc.stac import load
-```
+Use this checklist before calling an area "in drought":
 
-## 1. Select an area and find imagery
+- Is the observation compared with the same season and a multi-year baseline?
+- Were clouds, shadows, snow, water, and sensor gaps masked?
+- Is the land cover stable enough for the indicator to be meaningful?
+- Could harvest, planting, fire, pests, irrigation, or land management explain the signal?
+- Are the spatial and temporal resolutions appropriate for the decision being supported?
 
-We use a small agricultural area near Salzburg as an example. Coordinates are written
-as `(west, south, east, north)` in longitude/latitude (EPSG:4326).
+## Reproducibility
 
-```{python}
-#| label: aoi
+The examples use the public Microsoft Planetary Computer STAC catalogue and do not
+require an API key. The first notebook needs an internet connection to search and
+load Sentinel-2 assets. The second notebook runs on synthetic data and is useful for
+learning the formulas before working with satellite data.
 
-bbox = (13.00, 47.70, 13.10, 47.76)
-aoi = gpd.GeoDataFrame(
-    {"name": ["example AOI"]},
-    geometry=[make_box(*bbox)],
-    crs="EPSG:4326",
-)
-
-catalog = Client.open(
-    "https://planetarycomputer.microsoft.com/api/stac/v1",
-    modifier=planetary_computer.sign_inplace,
-)
-
-search = catalog.search(
-    collections=["sentinel-2-l2a"],
-    bbox=bbox,
-    datetime="2024-04-01/2024-09-30",
-    query={"eo:cloud_cover": {"lt": 30}},
-)
-items = list(search.items())
-if not items:
-    raise RuntimeError("No Sentinel-2 scenes matched the AOI and date filters.")
-len(items)
-```
-
-The search returns scenes rather than individual pixels. A low scene-level cloud
-percentage is useful, but it does not guarantee that every pixel in the AOI is clear.
-That is why we also use the Scene Classification Layer (SCL) below.
-
-## 2. Load the spectral bands
-
-Sentinel-2 surface reflectance is stored as scaled integer values. `odc-stac` combines
-the selected assets and reprojects them to a common 20 m grid.
-
-```{python}
-#| label: load-data
-
-bands = ["B03", "B04", "B08", "B11", "SCL"]
-cube = load(
-    items,
-    bands=bands,
-    bbox=bbox,
-    resolution=20,
-    crs="EPSG:32633",
-    groupby="solar_day",
-    chunks={},
-)
-
-reflectance = cube[["B03", "B04", "B08", "B11"]] / 10_000
-scl = cube["SCL"]
-reflectance
-```
-
-`B03` is green, `B04` red, `B08` near infrared (NIR), and `B11` short-wave infrared
-(SWIR). The SCL band supplies per-pixel quality information.
-
-## 3. Mask clouds and calculate spectral indices
-
-The SCL values used here are vegetation (4), bare soil (5), water (6), and snow or ice
-(11). Depending on the application, bare soil and water should be treated separately;
-we keep them in the example so the masking rule is easy to inspect.
-
-```{python}
-#| label: indices
-
-clear = scl.isin([4, 5, 6, 11])
-masked = reflectance.where(clear)
-
-def normalised_difference(a, b):
-    denominator = a + b
-    return xr.where(denominator != 0, (a - b) / denominator, np.nan)
-
-ndvi = normalised_difference(masked.B08, masked.B04).rename("NDVI")
-ndmi = normalised_difference(masked.B08, masked.B11).rename("NDMI")
-ndwi = normalised_difference(masked.B03, masked.B08).rename("NDWI")
-
-indices = xr.Dataset({"NDVI": ndvi, "NDMI": ndmi, "NDWI": ndwi})
-indices
-```
-
-### How to interpret the indices
-
-| Index | Formula | Main signal | Typical drought response |
-|---|---|---|---|
-| NDVI | `(NIR - red) / (NIR + red)` | canopy greenness and biomass | decreases as vegetation becomes stressed |
-| NDMI | `(NIR - SWIR) / (NIR + SWIR)` | vegetation water content | often decreases before strong greenness loss |
-| NDWI | `(green - NIR) / (green + NIR)` | open water and surface wetness | useful for water features, but not a universal vegetation drought index |
-
-These are indicators, not interchangeable measurements of drought severity. Crop type,
-phenology, soil background, shadows, and irrigation can all change the signal.
-
-```{python}
-#| label: map-ndvi
-#| fig-cap: "Median NDVI across the example AOI for the first available observation."
-
-first_ndvi = ndvi.isel(time=0)
-first_ndvi.plot(cmap="YlGn", vmin=0, vmax=1, figsize=(7, 4))
-plt.tight_layout()
-```
-
-## 4. From an index to a drought indicator
-
-Maps are useful for locating stress, but drought monitoring usually needs a time
-series. We reduce each image to the median value over the AOI. A spatial median is
-more robust than a mean when a few pixels remain contaminated by clouds or boundaries.
-
-```{python}
-#| label: time-series
-
-series = indices.median(dim=("y", "x"), skipna=True).sortby("time")
-series.to_dataframe().head()
-```
-
-### Anomalies
-
-An anomaly compares an observation with a reference distribution. The following
-example uses the median of this small, one-season sample as a teaching baseline. For
-operational monitoring, calculate the baseline from several years of comparable
-observations and account for the seasonal cycle.
-
-```{python}
-#| label: anomaly
-
-ndvi_baseline = series.NDVI.median("time")
-ndvi_anomaly = (series.NDVI - ndvi_baseline).rename("NDVI anomaly")
-
-fig, ax = plt.subplots(figsize=(9, 4))
-ndvi_anomaly.plot(ax=ax, marker="o", color="firebrick")
-ax.axhline(0, color="black", linewidth=0.8)
-ax.set_ylabel("NDVI anomaly")
-ax.set_title("NDVI departure from the sample baseline")
-plt.tight_layout()
-```
-
-Negative anomalies indicate less greenness than the reference period, but they are
-not automatically drought: harvest, planting, pests, and cloud contamination can
-produce the same pattern.
-
-### Vegetation Condition Index (VCI)
-
-VCI scales the current NDVI between the historical minimum and maximum:
-
-$$
-\mathrm{VCI} = 100 \times \frac{\mathrm{NDVI} - \mathrm{NDVI}_{min}}
-{\mathrm{NDVI}_{max} - \mathrm{NDVI}_{min}}.
-$$
-
-Low values indicate vegetation close to its historical minimum. This implementation
-uses the available sample as the historical range, so it demonstrates the calculation
-but should not be used as a real drought assessment.
-
-```{python}
-#| label: vci
-
-ndvi_min = series.NDVI.min("time")
-ndvi_max = series.NDVI.max("time")
-ndvi_range = ndvi_max - ndvi_min
-vci = xr.where(
-    ndvi_range != 0,
-    100 * (series.NDVI - ndvi_min) / ndvi_range,
-    np.nan,
-).rename("VCI")
-
-fig, ax = plt.subplots(figsize=(9, 4))
-vci.plot(ax=ax, marker="o", color="darkgreen")
-ax.axhspan(0, 20, color="firebrick", alpha=0.12, label="very low (illustrative)")
-ax.axhspan(20, 35, color="orange", alpha=0.12, label="low (illustrative)")
-ax.set_ylim(0, 100)
-ax.set_ylabel("VCI (%)")
-ax.set_title("Vegetation Condition Index")
-ax.legend(loc="best")
-plt.tight_layout()
-```
-
-## 5. Indicators that need thermal data
-
-Sentinel-2 has no thermal infrared band, so it cannot provide land-surface
-temperature-based indices by itself. A common complementary workflow uses MODIS or
-Landsat thermal observations:
-
-* **TCI (Temperature Condition Index)** scales land surface temperature between its
-  historical minimum and maximum. High temperature stress produces a low TCI.
-* **VHI (Vegetation Health Index)** combines VCI and TCI, commonly as
-  `VHI = alpha * VCI + (1 - alpha) * TCI`.
-* **VSWI (Vegetation Supply Water Index)** combines greenness and temperature, but its
-  exact definition varies by study.
-
-When combining sensors, align their spatial resolution, temporal compositing period,
-quality masks, and baseline years. A Sentinel-2 NDVI anomaly and a MODIS LST anomaly
-should not be combined until those choices have been made explicit.
-
-## Exercises
-
-1. Change the AOI and date range. How does the number of usable scenes change?
-2. Replace the spatial median with a field polygon average. Which result is more
-   stable?
-3. Exclude SCL water and bare-soil pixels. Does the NDVI time series change?
-4. Build a multi-year baseline and calculate VCI for one target year.
-5. Add a thermal dataset and compare a TCI time series with NDMI.
-
-## Take-home points
-
-* Spectral indices are proxies for surface conditions, not direct drought observations.
-* Quality masking and a defensible temporal baseline are as important as the formula.
-* NDVI, NDMI, and NDWI answer different questions; do not treat them as synonyms.
-* VCI is a relative indicator. Its meaning depends on the reference period and land
-  cover.
-* Combining optical vegetation and thermal stress indicators requires careful temporal
-  and spatial harmonisation.
+This site is rendered with Quarto and published to GitHub Pages from this repository.

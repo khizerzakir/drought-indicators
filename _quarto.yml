@@ -1,14 +1,19 @@
 project:
   type: book
-  output-dir: _site
+  output-dir: docs
+  resources:
+    - "notebooks/*.ipynb"
 
 book:
   title: "Drought indicators from remote sensing"
   subtitle: "A practical Quarto tutorial"
   author: "CLIMB course materials"
   date: today
+  repo-url: https://github.com/khizerzakir/drought-indicators
+  repo-actions: [edit, issue]
   chapters:
     - index.qmd
+    - tutorial.qmd
 
 format:
   html:
