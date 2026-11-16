@@ -59,7 +59,13 @@ def search(collection: str, bbox, start: str, end: str, query: dict | None = Non
     items = list(catalog.search(collections=[collection], bbox=bbox,
                                 datetime=f"{start}/{end}", query=query).items())
     if months:
-        items = [it for it in items if it.datetime.month in months]
+        def item_month(item):
+            dt = item.datetime
+            if dt is None:
+                dt = pd.Timestamp(item.properties["start_datetime"]).to_pydatetime()
+            return dt.month
+
+        items = [it for it in items if item_month(it) in months]
     if not items:
         raise RuntimeError(f"No {collection} items for {bbox} {start}/{end}.")
     return items
@@ -140,7 +146,8 @@ def load_modis_ndvi(bbox, start: str, end: str, catalog=None, product: str = "13
     items = [it for it in items if "MOD" in it.id.upper()] or items   # Terra only
     pre = f"{res}m_16_days"
     ds = load(items, bands=[f"{pre}_NDVI", f"{pre}_pixel_reliability"], bbox=bbox,
-              resolution=res, crs=crs or f"EPSG:{utm_epsg(bbox)}", groupby="solar_day", chunks={})
+              resolution=res, crs=crs or f"EPSG:{utm_epsg(bbox)}", groupby="solar_day",
+              chunks={}, dtype="float32")
     ndvi = ds[f"{pre}_NDVI"].where(ds[f"{pre}_NDVI"] > -2000) * 1e-4
     return ndvi.where(ds[f"{pre}_pixel_reliability"].isin([0, 1])).rename("ndvi")
 
@@ -153,7 +160,8 @@ def load_modis_lst(bbox, start: str, end: str, catalog=None, crs: str | None = N
     items = search("modis-11A2-061", bbox, start, end, catalog=catalog, months=months)
     items = [it for it in items if "MOD" in it.id.upper()] or items
     ds = load(items, bands=["LST_Day_1km", "QC_Day"], bbox=bbox, resolution=1000,
-              crs=crs or f"EPSG:{utm_epsg(bbox)}", groupby="solar_day", chunks={})
+              crs=crs or f"EPSG:{utm_epsg(bbox)}", groupby="solar_day",
+              chunks={}, dtype="float32")
     lst = ds["LST_Day_1km"].where(ds["LST_Day_1km"] > 0) * 0.02 - 273.15
     return lst.where((ds["QC_Day"].astype("uint8") & 0b11) <= 1).rename("lst")
 

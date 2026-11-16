@@ -50,6 +50,24 @@ def test_composite_scenes_remove_clouds():
     assert float(scenes.red.max()) > 0.4       # but individual scenes had clouds
 
 
+def test_search_filters_interval_stac_items_by_start_date():
+    class Item:
+        datetime = None
+        properties = {"start_datetime": "2026-07-08T00:00:00Z"}
+
+    class Search:
+        def items(self):
+            return iter([Item()])
+
+    class Catalog:
+        def search(self, **kwargs):
+            return Search()
+
+    items = rs.search("modis-11A2-061", (14.4, 47.3, 17.2, 49.05),
+                      "2026-01-01", "2026-12-31", catalog=Catalog(), months=(7,))
+    assert len(items) == 1
+
+
 def test_drought_signal_rainfed_vs_irrigated(comp):
     ix = dk.spectral_indices(comp)
     z = dk.anomaly(ix.NDVI, baseline=(2017, 2025), standardize=True).sel(time="2026-07-01")

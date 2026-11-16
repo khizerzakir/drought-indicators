@@ -11,3 +11,7 @@ presentation_files/
 /.quarto/
 **/*.quarto_ipynb
 data/
+
+## ignore the 3rd notebook
+
+notebooks/03_modis_condition_indices.ipynb
