@@ -1,0 +1,102 @@
+/*-- scss:defaults --*/
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+
+$ink: #1d2a2e;
+$paper: #fbf8f1;
+$rule: #d9cfb8;
+$muted: #6b7472;
+$dry: #b5542d;
+$dry-deep: #6b2410;
+$wet: #1f6f78;
+$wet-deep: #0f3f4a;
+$ochre: #d99a2b;
+
+$body-bg: $paper;
+$body-color: $ink;
+$link-color: $wet;
+$selection-bg: #f2d9a6;
+$main-font: "Inter", system-ui, sans-serif;
+$heading-font: "Fraunces", Georgia, serif;
+$code-font: "JetBrains Mono", ui-monospace, monospace;
+$presentation-font-size-root: 30px;
+$presentation-heading-color: $ink;
+$presentation-heading-font-weight: 600;
+$presentation-heading-letter-spacing: -0.015em;
+$presentation-h1-font-size: 2.3em;
+$presentation-h2-font-size: 1.32em;
+$presentation-h3-font-size: 1em;
+$code-block-bg: #f1ebdd;
+$code-color: $dry-deep;
+$code-block-border-color: transparent;
+
+/*-- scss:rules --*/
+
+.reveal .slides { text-align: left; }
+.reveal h2 { margin-bottom: .5em; line-height: 1.12; max-width: 24em; }
+.reveal p, .reveal li { line-height: 1.42; }
+.reveal ul, .reveal ol { margin-left: 1.1em; }
+.reveal ul li::marker { color: $dry; }
+.reveal ol li::marker { color: $dry; font-weight: 700; font-family: $heading-font; }
+.reveal strong { font-weight: 700; }
+.reveal em { font-style: italic; }
+.reveal .dry { color: $dry; font-weight: 600; }
+.reveal .wet { color: $wet; font-weight: 600; }
+.reveal .slide-number { color: $muted; background: transparent; font-family: $main-font; font-size: 14px; }
+.reveal .progress { color: $dry; height: 3px; }
+.reveal .footer { font-family: $main-font; font-size: 13px; color: $muted; }
+
+/* thin dry-to-wet rule under every content-slide heading */
+.reveal .slides section:not(.title-slide):not(.section-slide) > h2::after {
+  content: ""; display: block; width: 3.2em; height: 4px; border-radius: 2px; margin-top: .28em;
+  background: linear-gradient(90deg, #6b2410, #d07a3c, #efc58c, #9fd0c4, #1f6f78);
+}
+
+/* ---------- title slide ---------- */
+#title-slide {
+  text-align: left !important;
+  h1.title { font-size: 2.1em; font-weight: 800; line-height: 1.04; max-width: 9.5em; margin-top: 1.2em; }
+  .subtitle { font-family: $main-font; color: $muted; font-size: .78em; margin-top: .7em; max-width: 16em; line-height: 1.35; }
+  .quarto-title-authors, .author { font-family: $main-font; font-size: .55em; color: $ink; margin-top: 2em; }
+}
+
+/* ---------- section slides ---------- */
+.reveal section.section-slide { padding-top: 2.4em !important; }
+.reveal section.section-slide .num {
+  display: block; font-family: $heading-font; font-size: 1em; font-weight: 600; letter-spacing: .08em;
+  color: rgba(251, 248, 241, .7); margin-bottom: .3em;
+}
+.reveal section.section-slide .sec-title {
+  display: block; font-family: $heading-font; color: $paper; font-size: 2.4em; font-weight: 800;
+  line-height: 1.04; margin-bottom: .4em; max-width: 11em;
+}
+.reveal section.section-slide p { color: rgba(251, 248, 241, .85); font-size: .95em; max-width: 24em; }
+
+/* ---------- statements and lead text ---------- */
+.statement { font-family: $heading-font; font-size: 1.6em; line-height: 1.18; font-weight: 600; max-width: 19em; }
+.lead { font-size: .95em; max-width: 30em; }
+.small { font-size: .78em; }
+.smaller { font-size: .64em; }
+.muted { color: $muted; }
+.source, .reveal .caption-note { font-size: .46em; color: $muted; margin-top: .35em; line-height: 1.35; }
+.chain { font-family: $heading-font; font-size: 1.05em; line-height: 1.6; }
+.chain .arrow { color: $muted; padding: 0 .25em; }
+
+/* ---------- tables: rules only, no fills ---------- */
+.reveal table { font-size: .66em; border-collapse: collapse; width: 100%; }
+.reveal table th { border-bottom: 1.5px solid $ink !important; font-weight: 600; text-align: left; background: none; }
+.reveal table td, .reveal table th { padding: .38em .7em .38em 0 !important; border-bottom: 1px solid $rule; }
+.reveal table tr:last-child td { border-bottom: 1.5px solid $ink; }
+
+/* ---------- figures ---------- */
+.reveal img { border-radius: 0; }
+.reveal .fullwidth img, .reveal img.fullwidth { width: 100%; }
+
+/* ---------- code ---------- */
+.reveal pre code { font-size: .86em; line-height: 1.45; max-height: 520px; }
+.reveal div.sourceCode { border-radius: 4px; }
+
+/* ---------- a quote-like aside, marked only by a rule ---------- */
+.sidenote { border-left: 3px solid $ochre; padding-left: .8em; font-size: .78em; color: $ink; }
+
+#title-slide .quarto-title-authors { justify-content: flex-start !important; text-align: left; }
+#title-slide .quarto-title-author { padding-left: 0 !important; }

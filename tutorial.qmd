@@ -1,0 +1,234 @@
+---
+title: "Tutorial: drought from monthly satellite composites"
+description: "Sentinel-2 and Landsat monthly median composites and MODIS condition indices for the Marchfeld, with ERA5 SPI and SPEI as climate context."
+---
+
+This chapter is the methods guide behind the notebooks. It explains how to build clean monthly composites
+from Sentinel-2 and Landsat, which spectral indices to derive from them, how to turn those indices into
+drought indicators, why MODIS is needed for long baselines, and how SPI and SPEI from ERA5 put the
+satellite picture into climatic context. The running example is a block of fields in the Marchfeld, Lower
+Austria.
+
+```{python}
+#| label: setup
+import matplotlib.pyplot as plt
+import xarray as xr
+import droughtkit as dk
+from droughtkit import remote_sensing as rs
+from droughtkit import plotting as dkp
+dkp.use_style()
+```
+
+## What satellites can and cannot see
+
+Satellites do not measure drought. They measure how the land surface responds to a lack of water: plants
+lose green biomass, canopies lose water, and surfaces heat up when evaporative cooling stops. Those
+responses also happen for other reasons (harvest, mowing, pests, fire, bare soil after ploughing), so a
+satellite indicator becomes a drought indicator only when it is compared with what is normal for that
+place and that time of year [@kogan1995; @svoboda2016].
+
+The Marchfeld makes this concrete. It is Austria's main arable plain, roughly 500–550 mm of rain a year,
+with large fields of winter cereals, maize, sugar beet and vegetables. Many fields are irrigated from
+groundwater. In a dry summer a rainfed field and an irrigated one a few hundred metres apart can look
+completely different, which is exactly what field-scale imagery can show and coarse climate data cannot.
+
+![The case-study region: Austria and the Marchfeld, with one ERA5 grid cell and the Sentinel-2 / Landsat
+study area.](images/study_area.png)
+
+## Three sensors, three roles
+
+| | Sentinel-2 L2A | Landsat 8/9 C2 L2 | MODIS Terra |
+|---|---|---|---|
+| Pixel size | 10–20 m | 30 m optical, 100 m thermal | 250 m–1 km |
+| Revisit | 5 days | 8 days with two satellites | daily |
+| Record | 2015– | 2013– (Landsat 8) | 2000– |
+| Role here | field-scale indices and anomalies | surface temperature, second optical sensor | long baselines for VCI, TCI, VHI |
+
+All three are read from Microsoft Planetary Computer through STAC, without an account, and loaded lazily
+with `odc-stac` so that only the pixels of the area of interest are transferred.
+
+## Monthly median composites
+
+Individual scenes are irregular in time and partly cloudy. A monthly composite turns them into one image
+per month in four steps:
+
+1. **Search** all scenes of the month for the area, with a generous scene-level cloud limit.
+2. **Mask** every scene pixel by pixel: the Sentinel-2 Scene Classification Layer keeps vegetation (4),
+   bare soil (5) and water (6); Landsat's `QA_PIXEL` flags fill, cloud, dilated cloud, cirrus, shadow and
+   snow.
+3. **Harmonise and scale.** Sentinel-2 digital numbers carry a +1000 offset since processing baseline 04.00
+   (25 January 2022); remove it per scene, then divide by 10 000. Landsat Collection 2 reflectance is
+   DN × 0.0000275 − 0.2 and surface temperature DN × 0.00341802 + 149 K.
+4. **Take the median** of all clear observations per pixel and month, and record how many there were.
+
+```{python}
+#| label: composites
+bbox = dk.MARCHFELD["bbox"]                       # fields near Lassee and Obersiebenbrunn
+s2 = rs.monthly_cube("sentinel2", bbox, years=range(2017, 2027), months=range(4, 10))
+ls = rs.monthly_cube("landsat", bbox, years=range(2017, 2027), months=range(4, 10))
+```
+
+The median, rather than the mean, discards residual cloud edges and haze that the mask misses. Months with
+no clear observation stay empty and are reported, never interpolated silently. Bands are renamed to common
+names (blue, green, red, nir, swir1, swir2) so that the same code serves both sensors. Small spectral
+differences between them remain; NASA's Harmonized Landsat Sentinel-2 product (HLS) corrects those formally.
+
+![One month, step by step: cloudy acquisitions, the masked scenes, the median composite and the number of
+clear looks per pixel (offline synthetic stand-in until the notebooks are run online).](images/compositing.png)
+
+## Spectral indices
+
+Each composite yields several indices. They respond to different parts of the drought response and should
+be read together.
+
+| Index | Formula | Signal | In drought |
+|---|---|---|---|
+| NDVI | (NIR − red) / (NIR + red) | green biomass | falls |
+| EVI | 2.5 (NIR − red) / (NIR + 6 red − 7.5 blue + 1) | greenness, less saturation in dense crops | falls |
+| NDMI | (NIR − SWIR1) / (NIR + SWIR1) | canopy water content [@gao1996] | falls, often before NDVI |
+| MSI | SWIR1 / NIR | moisture stress | rises |
+| NDWI | (green − NIR) / (green + NIR) | open water [@mcfeeters1996] | not a vegetation index |
+| LST | Landsat thermal band | surface temperature | rises |
+
+```{python}
+#| label: indices
+idx = dk.spectral_indices(s2)          # NDVI, EVI, NDMI, MSI, NDWI
+```
+
+## From an index to a drought indicator
+
+An NDVI of 0.3 in July is normal for a harvested wheat field and alarming for maize. Every indicator below
+therefore compares a pixel with **the same calendar month** in a set of reference years.
+
+**Anomaly.** The difference from the reference median for that month. Easy to read in index units
+(Δ NDVI = −0.15).
+
+**Standardised anomaly (z-score).** The anomaly divided by the year-to-year standard deviation. A z of −2
+means unusually low for this pixel and month, whether forest or sugar beet. With the nine reference years
+Sentinel-2 offers, treat it as a guide rather than a probability.
+
+**Condition indices.** Kogan's Vegetation Condition Index places the current value between the lowest (0)
+and highest (100) value of that month in the record; the Temperature Condition Index does the same for land
+surface temperature, inverted; their mean is the Vegetation Health Index [@kogan1995]:
+
+$$
+\mathrm{VCI} = 100\,\frac{\mathrm{NDVI}-\mathrm{NDVI}_{\min,m}}{\mathrm{NDVI}_{\max,m}-\mathrm{NDVI}_{\min,m}},\quad
+\mathrm{TCI} = 100\,\frac{\mathrm{LST}_{\max,m}-\mathrm{LST}}{\mathrm{LST}_{\max,m}-\mathrm{LST}_{\min,m}},\quad
+\mathrm{VHI} = \tfrac12(\mathrm{VCI}+\mathrm{TCI}).
+$$
+
+The same scaling applied to NDMI is sometimes called a moisture condition index.
+
+**Area under stress.** The share of the area below a threshold (z < −1, VHI < 40) per month condenses a map
+into one number that is comparable between years.
+
+```{python}
+#| label: indicators
+baseline = (2017, 2025)
+ndvi_z = dk.anomaly(idx.NDVI, baseline, standardize=True)
+ndmi_anom = dk.anomaly(idx.NDMI, baseline)
+vci = dk.vci(idx.NDVI, baseline)
+stressed = dk.area_below(ndvi_z, -1.0)     # % of the AOI per month
+```
+
+![Indices and anomalies for July 2026 over the Marchfeld fields (offline synthetic stand-in until the
+notebooks are run online). Rainfed fields drop well below their usual July values; irrigated fields stay
+close to normal.](images/s2_anomalies.png)
+
+The most common mistake is to compute a condition index from the minimum and maximum of a single season.
+That turns phenology into "drought": every spring and autumn look severe, and real drought months disappear.
+The baseline must be the same month across many years.
+
+### Interpreting field-scale maps
+
+Field patterns are the strength of Sentinel-2 and the main source of misinterpretation. Winter cereals are
+harvested in the Marchfeld by mid-July, so a brown cereal field in late July is not a drought signal. Crop
+rotation changes the "normal" of a field from year to year. Irrigation keeps fields green through a
+meteorological drought. The INVEKOS field parcels published by AMA on [data.gv.at](https://www.data.gv.at)
+give the crop of every field and allow anomalies per crop rather than per pixel.
+
+## MODIS for long baselines
+
+Condition indices need a long record: the minimum and maximum of a month over nine years are not the same
+as over twenty-five. MODIS NDVI (MOD13A1, 500 m, 16-day) and daytime land-surface temperature (MOD11A2,
+1 km, 8-day) start in 2000. Monthly MODIS composites for eastern Austria against a 2001–2020 baseline show
+whether this summer is unusual in a 25-year perspective, and how far the stress reaches beyond the
+Marchfeld.
+
+```{python}
+#| label: modis
+region = dk.EAST_AUSTRIA_BBOX
+ndvi = rs.load_modis_ndvi(region, "2001-01-01", "2026-10-31", product="13A1",
+                          crs="EPSG:3416", months=(4, 5, 6, 7, 8, 9))
+lst = rs.load_modis_lst(region, "2001-01-01", "2026-10-31", crs="EPSG:3416",
+                        months=(4, 5, 6, 7, 8, 9))
+vhi = dk.vhi(dk.vci(rs.monthly_composite(ndvi), (2001, 2020)),
+             dk.tci(rs.monthly_composite(lst).interp_like(ndvi, method="nearest"), (2001, 2020)))
+```
+
+![MODIS VCI, TCI and VHI for July 2026 in eastern Austria, baseline 2001–2020 (offline synthetic stand-in
+until the notebooks are run online). Outline: Gänserndorf district.](images/modis_vhi.png)
+
+VCI reacts to the accumulated effect on vegetation; TCI reacts within days to heat and lost evaporative
+cooling. Forested hills often show a TCI signal before any VCI signal; arable lowlands show both, unless
+irrigation keeps them green and cool. VHI below 40 is commonly read as drought stress, but the thresholds
+are a convention, not physics.
+
+## Climate context: SPI and SPEI from ERA5
+
+Satellite indicators describe the effect; climate indices describe the cause. ERA5 reanalysis
+[@hersbach2020] for the Marchfeld comes from the free Open-Meteo archive API [@zippenfenig2023].
+
+The **Standardized Precipitation Index** accumulates rainfall over *k* months, fits a gamma distribution to
+that calendar month in a reference period, and expresses the probability as a standard-normal value
+[@mckee1993; @wmo2012]. The **Standardized Precipitation-Evapotranspiration Index** does the same for
+rainfall minus reference evapotranspiration with a log-logistic distribution, so a hot summer counts against
+the water balance [@vicente2010]. Values below −1, −1.5 and −2 are usually read as moderately, severely and
+extremely dry.
+
+```{python}
+#| label: spi
+clim = dk.load_climate()                         # Marchfeld, monthly ERA5
+spi3 = dk.spi(clim.precip_mm, 3, calibration=(1991, 2020))
+spei3 = dk.spei(clim.precip_mm, clim.et0_mm, 3, calibration=(1991, 2020))
+```
+
+Correlating the Marchfeld's growing-season VHI with SPEI at different accumulation scales shows over which
+time window vegetation integrates the water balance; in arable regions this is typically one to three
+months [@vicente2013]. In dry lowlands the summer water balance can be strongly skewed, and the log-logistic
+fit then fails for some months; `dk.spei` falls back to an empirical standardisation for those months and
+lists them in `spei3.attrs["empirical_months"]`.
+
+For Austria-specific climate work, GeoSphere Austria's SPARTACUS (1 km daily precipitation and temperature
+since 1961) [@hiebl2018] and WINFORE (1 km reference evapotranspiration and SPEI) are the national
+reference grids on the [GeoSphere Data Hub](https://data.hub.geosphere.at).
+
+## Reporting checklist
+
+| Item | Example for the Marchfeld |
+|---|---|
+| Sensors, collections, processing level | Sentinel-2 L2A, Landsat 8/9 C2 L2, MOD13A1 / MOD11A2 v061 |
+| Area and grid | 15 × 11 km near Lassee, UTM 33N, 20 m; eastern Austria, EPSG:3416, 500 m |
+| Masking and harmonisation | SCL 4–6; QA_PIXEL bits 0–5; Sentinel-2 offset removed |
+| Compositing | monthly median of clear observations; clear-look count reported |
+| Indices and indicators | NDVI, NDMI z-scores; VCI, TCI, VHI |
+| Reference period | 2017–2025 (Sentinel-2), 2001–2020 (MODIS), 1991–2020 (SPI/SPEI) |
+| Coverage | share of the area observed per month; empty months listed |
+| Validation | crop type (INVEKOS), yields, groundwater levels (eHYD) |
+
+## Exercises
+
+1. Build July composites with a scene-level cloud limit of 30 % and 90 %. How do coverage and the result change?
+2. Leave out the Sentinel-2 offset correction for 2021 and 2023. How large is the artificial NDVI change?
+3. Compare NDVI and NDMI anomalies field by field. Which responds first, and in which crops?
+4. Change the Sentinel-2 reference years and watch how the z-scores move. What does that say about short baselines?
+5. Map MODIS VHI for July 2018 and 2022 and compare the spatial pattern with 2026.
+6. Correlate the Marchfeld VHI with SPI and with SPEI. What does the difference say about the role of heat?
+
+## Take-home points
+
+- Composites first: mask every scene, harmonise, take the monthly median, and report coverage.
+- Read several indices together: greenness, canopy water and surface temperature.
+- An index becomes a drought indicator only against the same month in a reported reference period.
+- Use Sentinel-2 and Landsat for where, MODIS for how unusual, ERA5 for why.
+- Check crop calendars, rotation and irrigation before calling a field stressed.

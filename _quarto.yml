@@ -1,0 +1,58 @@
+project:
+  type: book
+  output-dir: docs
+  resources:
+    - "images/*"
+  render:
+    - index.qmd
+    - tutorial.qmd
+    - notebooks/01_monthly_composites.ipynb
+    - notebooks/02_indices_from_composites.ipynb
+    - notebooks/03_modis_condition_indices.ipynb
+    - references.qmd
+
+book:
+  title: "Drought from space, with open data"
+  subtitle: "Sentinel-2, Landsat and MODIS monthly composites for the Marchfeld"
+  author: "CLIMB course materials"
+  date: today
+  repo-url: https://github.com/khizerzakir/drought-indicators
+  repo-actions: [edit, issue]
+  page-navigation: true
+  sidebar:
+    style: floating
+    tools:
+      - icon: easel
+        href: presentation.html
+        text: "Slides"
+  chapters:
+    - index.qmd
+    - tutorial.qmd
+    - part: "Hands-on notebooks"
+      chapters:
+        - notebooks/01_monthly_composites.ipynb
+        - notebooks/02_indices_from_composites.ipynb
+        - notebooks/03_modis_condition_indices.ipynb
+    - references.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme:
+      light: [cosmo, theme/book.scss]
+    toc: true
+    toc-depth: 3
+    code-fold: show
+    code-tools: true
+    code-copy: true
+    number-sections: true
+    highlight-style: github
+    fig-align: center
+    link-external-newwindow: true
+
+execute:
+  enabled: false
+  freeze: auto
+  warning: false
+  message: false

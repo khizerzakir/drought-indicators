@@ -1,0 +1,19 @@
+# core
+numpy
+pandas
+scipy
+xarray
+netCDF4
+matplotlib
+jupyter
+# satellite access (Planetary Computer, STAC)
+pystac-client
+planetary-computer
+odc-stac
+dask[array]
+# maps
+geopandas
+pyproj
+pillow
+# testing
+pytest

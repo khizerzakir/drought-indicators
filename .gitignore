@@ -1,0 +1,13 @@
+.venv/
+_site/
+docs/
+_freeze/
+.quarto/
+__pycache__/
+*.pyc
+presentation.html
+presentation_files/
+
+/.quarto/
+**/*.quarto_ipynb
+data/
