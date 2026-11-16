@@ -1,7 +1,7 @@
 ---
-title: "Drought from space, with open data"
-subtitle: "Monthly Sentinel-2, Landsat and MODIS composites for the Marchfeld, Lower Austria"
-author: "CLIMB course materials"
+title: "Drought Using Remote Sensing & Open Data"
+subtitle: "Case study of the Marchfeld, Lower Austria"
+author: "Khizer Zakir"
 title-slide-attributes:
   data-background-image: images/austria_hero.png
   data-background-size: 50%
@@ -21,7 +21,7 @@ format:
     center: false
     controls-layout: bottom-right
     preview-links: auto
-    footer: "Drought from space · CLIMB"
+    footer: "Drought Using Remote Sensing & Open Data · Khizer Zakir"
     code-copy: true
     highlight-style: github
 execute:

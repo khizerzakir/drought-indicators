@@ -8,13 +8,13 @@ project:
     - tutorial.qmd
     - notebooks/01_monthly_composites.ipynb
     - notebooks/02_indices_from_composites.ipynb
-    - notebooks/03_modis_condition_indices.ipynb
+    # - notebooks/03_modis_condition_indices.ipynb
     - references.qmd
 
 book:
-  title: "Drought from space, with open data"
-  subtitle: "Sentinel-2, Landsat and MODIS monthly composites for the Marchfeld"
-  author: "CLIMB course materials"
+  title: "Introduction to Drought Monitoring with Remote Sensing"
+  subtitle: "Open data and open-source Python for drought monitoring: Case study of the Marchfeld, Lower Austria"
+  author: "Khizer Zakir"
   date: today
   repo-url: https://github.com/khizerzakir/drought-indicators
   repo-actions: [edit, issue]
@@ -32,7 +32,7 @@ book:
       chapters:
         - notebooks/01_monthly_composites.ipynb
         - notebooks/02_indices_from_composites.ipynb
-        - notebooks/03_modis_condition_indices.ipynb
+        # - notebooks/03_modis_condition_indices.ipynb
     - references.qmd
 
 bibliography: references.bib

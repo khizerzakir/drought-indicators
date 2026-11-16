@@ -1,7 +1,7 @@
 ---
-title: "Drought from space, with open data"
+title: "Introduction"
 number-sections: false
-subtitle: "Sentinel-2, Landsat and MODIS monthly composites for the Marchfeld, Lower Austria"
+subtitle: "Open data and open-source Python for drought monitoring: Case study of the Marchfeld, Lower Austria"
 ---
 
 ::: {.drought-stripe}
@@ -14,14 +14,13 @@ Few places feel that more than the **Marchfeld**, the plain between Vienna, the 
 Austria's main arable region, roughly 500–550 mm of rain a year, and a patchwork of rainfed and
 groundwater-irrigated fields.
 
-This course shows how to see that drought from space with free data and open-source Python. The core is
+This tutorial shows how to see that drought from space with free data and open-source Python. The core is
 **monthly median composites** from **Sentinel-2** and **Landsat**, from which we derive spectral indices
 (NDVI, EVI, NDMI, MSI, land-surface temperature) and drought indicators (anomalies, z-scores, the share of
 the area under stress). **MODIS** adds the 25-year record needed for the Vegetation, Temperature and
 Vegetation Health condition indices. **ERA5** SPI and SPEI provide the climate context.
 
-![The case-study region. Left: Austria's federal states and main rivers. Right: the Marchfeld with one ERA5
-grid cell (dashed) and the Sentinel-2 / Landsat study area near Lassee.](images/study_area.png)
+![The case-study region](images/austria_hero.png)
 
 ## The workflow
 
@@ -35,13 +34,13 @@ grid cell (dashed) and the Sentinel-2 / Landsat study area near Lassee.](images/
 
 ## How the material is organised
 
-The [tutorial](tutorial.qmd) is the methods guide; the [slides](presentation.html) cover the same ground in
-a 30-minute lecture. Three notebooks do the hands-on work:
+The [tutorial](tutorial.qmd) is the methods guide; the [slides](presentation.html) gives a quick overview and summary of the key concepts. Two notebooks do the hands-on work:
 [Notebook 1](notebooks/01_monthly_composites.ipynb) builds Sentinel-2 and Landsat monthly composites for
 the Marchfeld, from cloudy scenes to a multi-year cube;
 [Notebook 2](notebooks/02_indices_from_composites.ipynb) derives indices and drought indicators from them
-and maps field-scale stress; [Notebook 3](notebooks/03_modis_condition_indices.ipynb) computes MODIS VCI,
-TCI and VHI for eastern Austria and compares the Marchfeld with ERA5 SPI and SPEI.
+and maps field-scale stress; 
+<!-- [Notebook 3](notebooks/03_modis_condition_indices.ipynb) computes MODIS VCI,
+TCI and VHI for eastern Austria and compares the Marchfeld with ERA5 SPI and SPEI. -->
 
 All code lives in [`droughtkit`](https://github.com/khizerzakir/drought-indicators/tree/main/droughtkit), a
 short teaching library in this repository built on `xarray`, `odc-stac`, `pystac-client`,
@@ -49,7 +48,7 @@ short teaching library in this repository built on `xarray`, `odc-stac`, `pystac
 
 ## Austrian open data
 
-The course uses global datasets so that it can be repeated anywhere. For work in Austria, these national
+The tutorial uses global datasets so that it can be repeated anywhere. For work in Austria, these national
 sources add detail and independent evidence:
 
 | Dataset | Provider | What it offers |
@@ -62,7 +61,7 @@ sources add detail and independent evidence:
 
 ## Inspiration and further tools
 
-The course was inspired by several open projects. None of them is used by the code here, but each is
+The tutorial was inspired by several open projects. None of them is used by the code here, but each is
 worth knowing if you want to go further:
 
 - [monocongo/climate_indices](https://github.com/monocongo/climate_indices): reference implementations of

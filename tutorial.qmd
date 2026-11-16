@@ -1,12 +1,14 @@
 ---
-title: "Tutorial: drought from monthly satellite composites"
-description: "Sentinel-2 and Landsat monthly median composites and MODIS condition indices for the Marchfeld, with ERA5 SPI and SPEI as climate context."
+title: "Tutorial: drought using remote sensing"
+description: "There are many ways to measure drought. This tutorial shows how to use Sentinel-2, Landsat, MODIS and ERA5 to build a coherent picture of drought in a field block in the Marchfeld, Lower Austria."
 ---
 
-This chapter is the methods guide behind the notebooks. It explains how to build clean monthly composites
+This tutorial explains how to build clean monthly composites
 from Sentinel-2 and Landsat, which spectral indices to derive from them, how to turn those indices into
 drought indicators, why MODIS is needed for long baselines, and how SPI and SPEI from ERA5 put the
-satellite picture into climatic context. The running example is a block of fields in the Marchfeld, Lower
+satellite picture into climatic context. 
+
+The running example is a block of fields in the Marchfeld, Lower
 Austria.
 
 ```{python}
@@ -32,10 +34,10 @@ with large fields of winter cereals, maize, sugar beet and vegetables. Many fiel
 groundwater. In a dry summer a rainfed field and an irrigated one a few hundred metres apart can look
 completely different, which is exactly what field-scale imagery can show and coarse climate data cannot.
 
-![The case-study region: Austria and the Marchfeld, with one ERA5 grid cell and the Sentinel-2 / Landsat
-study area.](images/study_area.png)
+<!-- ![The case-study region: Austria and the Marchfeld, with one ERA5 grid cell and the Sentinel-2 / Landsat
+study area.](images/study_area.png) -->
 
-## Three sensors, three roles
+## Three sensors
 
 | | Sentinel-2 L2A | Landsat 8/9 C2 L2 | MODIS Terra |
 |---|---|---|---|
@@ -95,7 +97,7 @@ be read together.
 idx = dk.spectral_indices(s2)          # NDVI, EVI, NDMI, MSI, NDWI
 ```
 
-## From an index to a drought indicator
+## Index -> drought indicator
 
 An NDVI of 0.3 in July is normal for a harvested wheat field and alarming for maize. Every indicator below
 therefore compares a pixel with **the same calendar month** in a set of reference years.
@@ -114,6 +116,9 @@ surface temperature, inverted; their mean is the Vegetation Health Index [@kogan
 $$
 \mathrm{VCI} = 100\,\frac{\mathrm{NDVI}-\mathrm{NDVI}_{\min,m}}{\mathrm{NDVI}_{\max,m}-\mathrm{NDVI}_{\min,m}},\quad
 \mathrm{TCI} = 100\,\frac{\mathrm{LST}_{\max,m}-\mathrm{LST}}{\mathrm{LST}_{\max,m}-\mathrm{LST}_{\min,m}},\quad
+$$
+
+$$
 \mathrm{VHI} = \tfrac12(\mathrm{VCI}+\mathrm{TCI}).
 $$
 

@@ -1,4 +1,4 @@
-# Drought from space, with open data
+# Drought Using Remote Sensing & Open Data
 
 A reproducible course on satellite-based drought monitoring. Sentinel-2 and Landsat **monthly median
 composites** are turned into spectral indices and drought indicators; **MODIS** provides the long record for
