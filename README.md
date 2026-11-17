@@ -1,11 +1,13 @@
 # Drought Using Remote Sensing & Open Data
 
-A reproducible course on satellite-based drought monitoring. Sentinel-2 and Landsat **monthly median
-composites** are turned into spectral indices and drought indicators; **MODIS** provides the long record for
+A reproducible tutorial on satellite-based drought monitoring. Sentinel-2 and Landsat **monthly median
+composites** are turned into spectral indices and drought indicators; and we use **MODIS** that provides the long record for
 condition indices; **ERA5** SPI and SPEI give the climate context. The case study is the **Marchfeld**,
 Lower Austria.
 
-📖 Book: <https://khizerzakir.github.io/drought-indicators/> · 🎞️ Slides: <https://khizerzakir.github.io/drought-indicators/presentation.html>
+- Tutorial: <https://khizerzakir.github.io/drought-indicators/> 
+
+- Slides: <https://khizerzakir.github.io/drought-indicators/presentation.html>
 
 | Step | Data | Result |
 |---|---|---|
@@ -24,7 +26,7 @@ presentation.qmd          lecture slides (theme in theme/slides.scss)
 notebooks/
   01_monthly_composites.ipynb        cloudy scenes -> masked -> monthly median cube (Sentinel-2, Landsat)
   02_indices_from_composites.ipynb   indices, anomalies, z-scores, VCI/TCI/VHI, area under stress, maps
-  03_modis_condition_indices.ipynb   MODIS VCI/TCI/VHI for eastern Austria + ERA5 SPI/SPEI context
+  03_modis_condition_indices.ipynb   MODIS VCI/TCI/VHI for eastern Austria + ERA5 SPI/SPEI context - currently under development
 droughtkit/               the teaching library used everywhere
   remote_sensing.py       STAC loading, masking, harmonisation, monthly composites
   vegetation.py           spectral indices and drought indicators
@@ -71,17 +73,28 @@ quarto render                                   # book -> docs/
 quarto render presentation.qmd --no-execute     # slides -> presentation.html
 ```
 
-Pushing to `main` runs `.github/workflows/publish-quarto.yml`: install, run the tests, render the book and
+Pushing to `main` runs `.github/workflows/publish-quarto.yml`: install, run the tests, render the tutorial and
 slides, and deploy to GitHub Pages. Notebooks are rendered from their stored outputs.
 
 ## Inspiration (references only, not dependencies)
 
-monocongo/climate_indices · TerziTB/PyDRGHT · bennyistanto/eddi · mintproject/droughtIndices ·
-Laura-Guillory/DroughtMonitor · EUMETSAT Drought & Vegetation Data Cube ·
-Di Paola et al. (2025), *Building a framework for a synoptic overview of drought*, Sci. Total Environ. 958, 177949.
+### Github Repos:
+
+- monocongo/climate_indices 
+- TerziTB/PyDRGHT 
+- bennyistanto/eddi 
+- mintproject/droughtIndices
+- Laura-Guillory/DroughtMonitor 
+
+### Papers and others:
+
+- EUMETSAT Drought & Vegetation Data Cube ·
+
+- Di Paola et al. (2025), *Building a framework for a synoptic overview of drought*, Sci. Total Environ. 958, 177949.
 
 ## Data and licences
 
-Sentinel-2 (Copernicus), Landsat (USGS) and MODIS (NASA) via Microsoft Planetary Computer; ERA5 (Copernicus
-C3S) via Open-Meteo (CC BY 4.0). Map layers: Natural Earth (public domain); Austrian state and district
-boundaries from Statistik Austria via ginseng666/GeoJSON-TopoJSON-Austria (CC BY 4.0).
+- Sentinel-2 (Copernicus), Landsat (USGS) and MODIS (NASA) via Microsoft Planetary Computer; 
+- ERA5 (Copernicus C3S) via Open-Meteo (CC BY 4.0). 
+- Map layers: Natural Earth (public domain);
+- Austrian state and district boundaries from Statistik Austria via ginseng666/GeoJSON-TopoJSON-Austria (CC BY 4.0).
